@@ -10,7 +10,7 @@ var noFilter = &[]string{}
 
 
 // 1/ Test a simple page is fetched and parsed
-func testSimpleLinks(t *testing.T){
+func TestSimpleLinks(t *testing.T){
 
     // GIVEN: A simple website contains one page linked to 2 others
     var fetcher = MockedFetcher{
@@ -52,7 +52,7 @@ func testSimpleLinks(t *testing.T){
 
 
 // 2/ Test a simple page is not fetched twice if relinked
-func testRevisitedLinks(t *testing.T){
+func TestRevisitedLinks(t *testing.T){
 
     // GIVEN: A simple website contains one page linked to 2 others, and the two other contains previous links
     var fetcher = MockedFetcher{
@@ -100,7 +100,7 @@ func testRevisitedLinks(t *testing.T){
 
 
 // 3/ Test pages are crawled with absolute or relative links
-func testAbsoluteLinks(t *testing.T){
+func TestAbsoluteLinks(t *testing.T){
 
     // GIVEN: A simple website contains one page linked to 2 others, one being an absolute path, the other relative
     var fetcher = MockedFetcher{
@@ -143,7 +143,7 @@ func testAbsoluteLinks(t *testing.T){
 
 
 // 4/ Test pages are not crawled if from a different domain
-func testExternalLinks(t *testing.T){
+func TestExternalLinks(t *testing.T){
 
     // GIVEN: A simple website contains one page linked to a same-site page, and one external link
     var fetcher = MockedFetcher{
@@ -181,7 +181,7 @@ func testExternalLinks(t *testing.T){
 
 
 // 5/ Test pages are not crawled if exceeding max depth
-func testMaxDepth(t *testing.T){
+func TestMaxDepth(t *testing.T){
 
     // GIVEN: A simple website contains several pages one linked to a different other
     var fetcher = MockedFetcher{
@@ -238,7 +238,7 @@ func testMaxDepth(t *testing.T){
 
 
 // 6/ Test pages matching a filter are excluded
-func testFilters(t *testing.T){
+func TestFilters(t *testing.T){
 
     // GIVEN: A simple website contains several pages, some of which under a "/folder" path
     var fetcher = MockedFetcher{
