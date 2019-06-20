@@ -12,22 +12,26 @@ import (
 
 // SafeCounter holds a counter that's safe to access concurrently
 // (We can use alternatively sync/atomic)
-
 type SafeCounter struct {
     val uint
     mux sync.Mutex
 }
 
+// Increase increases counter value
 func (counter *SafeCounter) Increase() {
     counter.mux.Lock()
-    counter.val += 1
+    counter.val ++
     counter.mux.Unlock()
 }
+
+// Decrease decreases counter value
 func (counter *SafeCounter) Decrease() {
     counter.mux.Lock()
-    counter.val -= 1
+    counter.val --
     counter.mux.Unlock()
 }
+
+// IsEmpty checks if the counter value is empty
 func (counter *SafeCounter) IsEmpty() bool {
     counter.mux.Lock()
     defer counter.mux.Unlock()
@@ -36,7 +40,6 @@ func (counter *SafeCounter) IsEmpty() bool {
 
 
 // Page is a structure that contains a title and sublinks
-
 type Page struct {
     Url string
     Title string
@@ -60,11 +63,10 @@ func (page *Page) String() string {
 }
 
 
-// Processes a link and stores it to the map if necessary
-
+// ProcessLink processes a link and stores it to the map if necessary
 func ProcessLink(uri, base string, ignoredPatterns *[]string, store *map[string]bool) {
 
-    parsedUri, err := url.Parse(uri)
+    parsedURI, err := url.Parse(uri)
     if err != nil {
         return
     }
@@ -72,19 +74,19 @@ func ProcessLink(uri, base string, ignoredPatterns *[]string, store *map[string]
     baseHost := parsedBase.Host
 
     // Converts relative URLs to absolute
-    parsedUri = parsedBase.ResolveReference(parsedUri)
+    parsedURI = parsedBase.ResolveReference(parsedURI)
 
 
     // Ignores URL fragments
-    parsedUri.Fragment = ""
+    parsedURI.Fragment = ""
 
     // Processes only the links to same domain
-    if (parsedUri.Host != baseHost) {
+    if (parsedURI.Host != baseHost) {
         return
     }
 
     // Processes only the new links
-    _, existing := (*store)[parsedUri.String()]
+    _, existing := (*store)[parsedURI.String()]
     if existing {
         return
     }
@@ -92,7 +94,7 @@ func ProcessLink(uri, base string, ignoredPatterns *[]string, store *map[string]
     // Filters out URLs that are excluded
     filtered := false
     for _, prefix := range *ignoredPatterns {
-        if strings.HasPrefix(parsedUri.Path, prefix) {
+        if strings.HasPrefix(parsedURI.Path, prefix) {
             filtered = true
             break
         }
@@ -102,18 +104,17 @@ func ProcessLink(uri, base string, ignoredPatterns *[]string, store *map[string]
     }
 
     // Saves link in the map
-    (*store)[parsedUri.String()] = true
+    (*store)[parsedURI.String()] = true
 }
 
 
-// Parses a HTML document and returns title and list of links
-// Silently finishes if an error is met (e.g when parsing invalid HTML document)
-
-func ParseDocument(htmlBody io.Reader, parentUri string, ignoredPatterns *[]string) (string, []string) {
+// ParseDocument parses a HTML document and returns title and list of links
+// This silently finishes if an error is met (e.g when parsing invalid HTML document)
+func ParseDocument(htmlBody io.Reader, parentURI string, ignoredPatterns *[]string) (string, []string) {
 
     tokenizer := html.NewTokenizer(htmlBody)
     var title string
-    var links map[string]bool = make(map[string]bool)
+    var links = make(map[string]bool)
     finished := false
 
     // Looping through all page tokens
@@ -128,7 +129,7 @@ func ParseDocument(htmlBody io.Reader, parentUri string, ignoredPatterns *[]stri
                 for _, attr := range tag.Attr {
                     if attr.Key == "href" {
                         // Found a valid <a href=""> tag
-                        ProcessLink(attr.Val, parentUri, ignoredPatterns, &links)
+                        ProcessLink(attr.Val, parentURI, ignoredPatterns, &links)
                     }
                 }
             }
@@ -150,7 +151,6 @@ func ParseDocument(htmlBody io.Reader, parentUri string, ignoredPatterns *[]stri
 
 
 // Crawl fetches URL and crawl recursively nested urls, returning results in stream
-
 func Crawl(uri string, depth int, maxDepth int, ignoredPatterns *[]string, fetcher Fetcher, resultsStream chan *Page) {
 
     // Initialize crawler and prepare for closure once last job is complete
@@ -177,29 +177,27 @@ func Crawl(uri string, depth int, maxDepth int, ignoredPatterns *[]string, fetch
     if err != nil {
         resultsStream <- &Page{Url: uri, Error: err, Depth: depth}
         return
-    } else {
-        // Valid page is found, parsing it
-        title, subLinks := ParseDocument(resp, uri, ignoredPatterns)
-        resultsStream <- &Page{Url:uri, Title:title, SubLinks:subLinks, Depth:depth}
+    }
 
-        // Crawling nested links if they are not visited yet
-        for _, u := range subLinks {
-            _, existing := History.LoadOrStore(u, true)
-            if !existing {
-                // jobCounter is increased before goroutine call, to avoid parent thread to close channel
-                // before child is started
-                jobsCounter.Increase()
-                go Crawl(u, depth + 1, maxDepth, ignoredPatterns, fetcher, resultsStream)
-            }
+    // Valid page is found, parsing it
+    title, subLinks := ParseDocument(resp, uri, ignoredPatterns)
+    resultsStream <- &Page{Url:uri, Title:title, SubLinks:subLinks, Depth:depth}
+
+    // Crawling nested links if they are not visited yet
+    for _, u := range subLinks {
+        _, existing := History.LoadOrStore(u, true)
+        if !existing {
+            // jobCounter is increased before goroutine call, to avoid parent thread to close channel
+            // before child is started
+            jobsCounter.Increase()
+            go Crawl(u, depth + 1, maxDepth, ignoredPatterns, fetcher, resultsStream)
         }
-        return
     }
     return
 
 }
 
 
-// Caches to control routines spawns
-
+// History caches URLs that have been seen to control routines spawns
 var History = &sync.Map{}
 var jobsCounter = &SafeCounter{}

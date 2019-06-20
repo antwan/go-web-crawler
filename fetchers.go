@@ -7,7 +7,7 @@ import (
     "strings"
 )
 
-// Fetchers can return a document given a URL
+// Fetcher can return a document given a URL
 type Fetcher interface {
     Fetch(url string) (body io.ReadCloser, err error)
     Close(reader io.ReadCloser)
@@ -15,9 +15,9 @@ type Fetcher interface {
 
 
 // HTTPFetcher is a fetcher that returns real results using HTTP requests
-
 type HTTPFetcher struct {}
 
+// Fetch retrieves the URL data and returns it
 func (fetcher HTTPFetcher) Fetch(url string) (io.ReadCloser, error) {
     resp, err := http.Get(url)
     if err != nil {
@@ -26,6 +26,7 @@ func (fetcher HTTPFetcher) Fetch(url string) (io.ReadCloser, error) {
     return resp.Body, nil
 }
 
+// Close closes the data reader
 func (fetcher HTTPFetcher) Close(response io.ReadCloser) {
     if response != nil {
         response.Close()
@@ -34,7 +35,9 @@ func (fetcher HTTPFetcher) Close(response io.ReadCloser) {
 
 
 // MockedFetcher is a fetcher that return predefined results for testing purposes
+type MockedFetcher map[string]*MockedPage
 
+// MockedPage is the underlying structure to build MockedFetcher
 type MockedPage struct {
     Title string
     Links []string
@@ -44,12 +47,11 @@ type stringReaderCloser struct {
     *strings.Reader
 }
 
-func (r stringReaderCloser)Close() error {
+func (r stringReaderCloser) Close() error {
     return nil
 }
 
-type MockedFetcher map[string]*MockedPage
-
+// Fetch retrieves the URL data and returns it
 func (fetcher MockedFetcher) Fetch(url string) (io.ReadCloser, error) {
     if page, ok := fetcher[url]; ok {
         linksChunk := ""
@@ -62,4 +64,5 @@ func (fetcher MockedFetcher) Fetch(url string) (io.ReadCloser, error) {
     return nil, fmt.Errorf("not found: %s", url)
 }
 
+// Close closes the data reader
 func (fetcher MockedFetcher) Close(reader io.ReadCloser) {}
