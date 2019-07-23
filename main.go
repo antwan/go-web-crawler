@@ -12,7 +12,7 @@ func main() {
 
     // Configuration
     var ignoredPatterns = &[]string{"/cdn-cgi", "/help", "/blog"}
-    const domain string = "https://monzo.com"
+    const domain string = "https://server.com"
     const maxDepth int = 10
     var fetcher Fetcher = HTTPFetcher{}
 
